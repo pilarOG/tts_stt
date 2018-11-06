@@ -17,11 +17,13 @@ class Diphone(object):
             DIPHONES[diphone] = [(filename, self)]
         else:
             DIPHONES[diphone] += [(filename, self)]
+        self.setStress()
+
     def getTimes(self):
         return (self.c_seconds, self.n_seconds)
     def getFilename(self):
         return self.filename
-    def getPhones(self):
+    def getDiphone(self):
         return (self.c_diphone, self.n_diphone)
 
 
@@ -40,6 +42,7 @@ def setDiphoneLibrary(wav_path, lab_path):
                     n_line = data[l+1]
                     if re.findall(r'\d+\t\d+\t\w+', c_line):
                         Diphone(filepath, c_line, n_line)
+
         # Warn if alike
         else:
             print filepath+' does not have wav file with the same name'

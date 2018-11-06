@@ -167,18 +167,79 @@ def syllabify(phones):
 
     return syllables
 
+def stress(syllables):
+    stressed = []
+    syllables = ['#','#']+syllables+['#','#']
+
+    strsets = {'notNSV': ('p', 't', 'k', 'b', 'd', 'g', 'bA', 'dA', 'gA', 'f', 'hz',
+                          'x', 'ch', 'll', 'm', 'ny', 'l', 'llA', 'rA', 'r', 'rr'),
+               'V': ('a', 'e', 'i', 'o', 'u'),
+               'C': ('b', 'c', 'd', 'f', 'g', 'h', 'j', 'k',
+                     'l', 'm', 'n', 'ñ', 'p', 'q', 'r', 's',
+                     't', 'v', 'w', 'x', 'y', 'z'),
+               'VNS': ('n', 's', 'a', 'i', 'u', 'e', 'o')}
+
+    strVow = {'a': 'aS',
+              'e': 'eS',
+              'i': 'iS',
+              'o': 'oS',
+              'u': 'uS'}
+
+    lastSyl = False
+    plastSyl = False
+    for let in reversed(range(0, len(syllables))):
+        # agudas
+        if syllables[let] == '-' and lastSyl == False:
+            lastSyl = let
+            last = ['#','#']+syllables[let:]
+            for l in reversed(range(0, len(last))):
+                if last[l] != '#':
+                    c_let = last[l]
+                    p_let = last[l+1]
+                    pp_let = last[l+2]
+                    n_let = last[l-1]
+                    nn_let = last[l-2]
+                    if c_let in strsets['V'] and p_let in strsets['C'] and n_let in strsets['notNSV'] and nn_let == '#': stressed.append(strVow[c_let])
+                    else: stressed.append(c_let)
+        # graves
+        elif syllables[let] == '-' and type(lastSyl) == int and plastSyl == False:
+            plastSyl = let
+            plast = ['#','#']+syllables[let:lastSyl]+['#','#']
+            for l in reversed(range(0, len(plast))):
+                if plast[l] != '#':
+                    c_let = plast[l]
+                    p_let = plast[l+1]
+                    pp_let = plast[l+2]
+                    n_let = plast[l-1]
+                    nn_let = plast[l-2]
+                    if c_let in strsets['V'] and stressed[0] in strsets['VNS']:
+                        stressed.append(strVow[c_let])
+                    else: stressed.append(c_let)
+
+    stressed += list(reversed(syllables[:plastSyl]))
+    stressed = list(reversed(['#', '#']+stressed))
+
+    # get rid of hz
+    stressed_phones = []
+    for n in stressed:
+        if n == 'hz': stressed_phones.append('s')
+    else: stressed_phones.append(n)
+
+    return stressed_phones
 
 def transcribe(text):
-
     # lower case
     text = '##'+text.lower()+'##'
+    # TODO: normalization
     # LTS rules
     phones = ltsRules(text)
     # syllabification
     syllables = syllabify(phones)
+    # non written stress assignment
+    stressed = stress(syllables)
+
 
     return syllables
 
 
-
-print transcribe('que es eso')
+transcribe('que es eso')
