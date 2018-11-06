@@ -6,8 +6,14 @@ import pickle
 import set_diphone_library
 import sys
 import random
+from scipy.signal import fftconvolve
+import numpy as np
 
 DIPHONES = pickle.load(open('diphone_library.pckl', 'rb'))
+
+def similarity(template, test):
+    corr = fftconvolve(template, test, mode='same')
+    return max(abs(corr))
 
 def synthesize(text):
     # Get diphone list
@@ -32,24 +38,58 @@ def synthesize(text):
     # Select diphones from database
     silence = AudioSegment.from_wav('./wav/silence.wav')
     generated_audio = AudioSegment.from_wav('./wav/silence.wav')
-    for diphone in sentence_diphones:
-        # Backoff rules
-        if diphone not in DIPHONES:
-            if 'sp_' in diphone:
-                diphone = diphone.replace('sp_', 'sil_')
 
+    # Get first diphone
+    first_diphone = random.choice(DIPHONES[sentence_diphones[0]])
+    target = first_diphone[1]
+    filename = first_diphone[0]
+    t1 = float(target.c_seconds) * 1000
+    t2 = float(target.n_seconds) * 1000
+
+    target_file = AudioSegment.from_wav('./wav/'+filename.replace('.lab', '.wav').replace('./lab',''))
+    slice_audio = target_file[t1:t2]
+    generated_audio += slice_audio
+
+
+    previous_diphone = (filename, t1, t2)
+    # rest of the diphones, try to find the one that fits the best
+    for diphone in range(1, len(sentence_diphones)):
+        all_candidates = []
+        # Backoff rules
+        if sentence_diphones[diphone] not in DIPHONES:
+            if 'sp_' in diphone:
+                diphone = sentence_diphones[diphone].replace('sp_', 'sil_')
+        diphone = sentence_diphones[diphone]
         # If diphone exists
-        selected = random.choice(DIPHONES[diphone])
-        target = selected[1]
-        filename = selected[0]
-        t1 = float(target.c_seconds) * 1000
-        t2 = float(target.n_seconds) * 1000
+        for candidate in DIPHONES[diphone]:
+            target = candidate[1]
+            filename = candidate[0]
+            t1 = float(target.c_seconds) * 1000
+            t2 = float(target.n_seconds) * 1000
+            target_file = AudioSegment.from_wav('./wav/'+filename.replace('.lab', '.wav').replace('./lab',''))
+            previous_file = AudioSegment.from_wav('./wav/'+previous_diphone[0].replace('.lab', '.wav').replace('./lab',''))
+
+            # Slice both
+            target_slice = target_file[t1:t2]
+            target_array = target_slice.get_array_of_samples()
+            previous_slice = previous_file[previous_diphone[1]:previous_diphone[2]]
+            previous_array = previous_slice.get_array_of_samples()
+
+            # Score diphones
+            all_candidates.append([similarity(target_array,previous_array), filename, t1, t2])
+
+            previous_diphone = (filename, t1, t2)
+
+        all_candidates = sorted(all_candidates, key=lambda x: x[0])
+        target = all_candidates[0]
+        target_file = AudioSegment.from_wav('./wav/'+target[1].replace('.lab', '.wav').replace('./lab',''))
 
         # Get audio slice
-        target_file = AudioSegment.from_wav('./wav/'+filename.replace('.lab', '.wav').replace('./lab',''))
-        slice_audio = target_file[t1:t2]
+        slice_audio = target_file[target[2]:target[3]]
         generated_audio += slice_audio
+
+    # end with silence
     generated_audio += silence
-    generated_audio.export('generated.wav', format="wav")
+    generated_audio.export('generated2.wav', format="wav")
 
 synthesize(sys.argv[1].decode('utf-8'))
