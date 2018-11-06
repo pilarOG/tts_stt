@@ -6,7 +6,7 @@ import pickle
 DIPHONES = {}
 
 class Diphone(object):
-    def __init__(self, filename, c_line, n_line):
+    def setDiphone(self, filename, c_line, n_line):
         self.filename = filename
         self.c_diphone = re.findall(r'(\w+)\s\;\sscore', c_line)[0]
         self.n_diphone = re.findall(r'(\w+)\s\;\sscore', n_line)[0]
@@ -17,7 +17,6 @@ class Diphone(object):
             DIPHONES[diphone] = [(filename, self)]
         else:
             DIPHONES[diphone] += [(filename, self)]
-        self.setStress()
 
     def getTimes(self):
         return (self.c_seconds, self.n_seconds)
@@ -41,11 +40,12 @@ def setDiphoneLibrary(wav_path, lab_path):
                     c_line = data[l]
                     n_line = data[l+1]
                     if re.findall(r'\d+\t\d+\t\w+', c_line):
-                        Diphone(filepath, c_line, n_line)
-
+                        diphone = Diphone()
+                        diphone.setDiphone(filepath, c_line, n_line)
         # Warn if alike
         else:
             print filepath+' does not have wav file with the same name'
+
     # Save diphone dictionary
     pickle.dump(DIPHONES, open("diphone_library.pckl", "wb"))
     return DIPHONES

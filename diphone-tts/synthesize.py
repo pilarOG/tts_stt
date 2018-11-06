@@ -1,60 +1,55 @@
 
 import re
 from pydub import AudioSegment
+import spanish_transcriber
+import pickle
+import set_diphone_library
+import sys
+import random
 
-DIPHONES = {}
+DIPHONES = pickle.load(open('diphone_library.pckl', 'rb'))
 
-class Diphone(object):
+def synthesize(text):
+    # Get diphone list
+    transcription = []
+    for word in text.split(' '):
+        transcription += spanish_transcriber.transcribe(word)
 
-    def __init__(self, filename, c_line, n_line):
-        self.c_diphone = re.findall(r'(\w+)\s\;\sscore', c_line)[0]
-        self.c_seconds = re.findall(r'(\d+\.?\d+?)\s', c_line)[0]
-        self.n_diphone = re.findall(r'(\w+)\s\;\sscore', n_line)[0]
-        self.n_seconds = re.findall(r'(\d+\.?\d+?)\s', n_line)[0]
-        diphone = self.c_diphone+'_'+self.n_diphone
-        if diphone not in DIPHONES:
-            DIPHONES[diphone] = [(filename, self)]
-        else:
-            DIPHONES[diphone] += [(filename, self)]
+    # Postlex rules
+    # 2 subsequental equal sounds
+    transcribed_diphones = []
+    for n in range(0, len(transcription)):
+        if n != len(transcription)-1 and transcription[n] == transcription[n+1]: pass
+        else: transcribed_diphones.append(transcription[n])
+    print transcribed_diphones
 
-
-class GetDiphoneTimes(object):
-    def __init__(self, filename):
-        data = open(filename, 'r').read().split('\n')
-        for l in range(0, len(data)-2):
-            if l != len(data):
-                c_line = data[l]
-                n_line = data[l+1]
-                if re.findall(r'\d+\t\d+\t\w+', c_line):
-                    Diphone(filename, c_line, n_line)
-
-def transcribe(text):
-    transcription = ['oS','b_cl','b','r','a','sp','l','aS','r','gA','a']
-    return transcription
-
-
-def main():
-
-    transcription = transcribe('asdasd')
     sentence_diphones = []
-    for p in range(0, len(transcription)-1):
-        if p != len(transcription):
-            diphone = transcription[p]+'_'+transcription[p+1]
+    for p in range(0, len(transcribed_diphones)-1):
+        if p != len(transcribed_diphones):
+            diphone = transcribed_diphones[p]+'_'+transcribed_diphones[p+1]
             sentence_diphones.append(diphone)
-    print sentence_diphones
 
-    generated_audio = AudioSegment.from_wav('start.wav')
+    # Select diphones from database
+    silence = AudioSegment.from_wav('./wav/silence.wav')
+    generated_audio = AudioSegment.from_wav('./wav/silence.wav')
     for diphone in sentence_diphones:
-        target = DIPHONES[diphone][0][1]
-        filename = DIPHONES[diphone][0][0]
+        # Backoff rules
+        if diphone not in DIPHONES:
+            if 'sp_' in diphone:
+                diphone = diphone.replace('sp_', 'sil_')
+
+        # If diphone exists
+        selected = random.choice(DIPHONES[diphone])
+        target = selected[1]
+        filename = selected[0]
         t1 = float(target.c_seconds) * 1000
         t2 = float(target.n_seconds) * 1000
-        target_file = AudioSegment.from_wav(filename.replace('.lab', '_5.wav'))
+
+        # Get audio slice
+        target_file = AudioSegment.from_wav('./wav/'+filename.replace('.lab', '.wav').replace('./lab',''))
         slice_audio = target_file[t1:t2]
         generated_audio += slice_audio
-
+    generated_audio += silence
     generated_audio.export('generated.wav', format="wav")
 
-
-GetDiphoneTimes('chilean_n0001.lab')
-main()
+synthesize(sys.argv[1].decode('utf-8'))
