@@ -48,11 +48,13 @@ def ltsRules(text):
             elif c_let == u'ó': phones.append('oS')
             elif c_let == u'ú': phones.append('uS')
 
+            elif c_let == u'ü': phones.append('u')
+
             # semivowels
             elif c_let == 'u' and n_let in letsets['AV']: phones.append('uSC')
             elif c_let == 'u' and p_let in letsets['AV']: phones.append('uSV')
             elif c_let == 'i' and n_let in letsets['AV']: phones.append('iSC')
-            elif c_let == 'i' and pp_let in letsets['noQ']: phones.append('iSV')
+            elif c_let == 'i' and pp_let in letsets[u'noQ']: phones.append(u'iSV')
 
             # y as vowel and w
             elif c_let == 'y' and n_let == '#': phones.append('i')
