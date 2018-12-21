@@ -43,11 +43,12 @@ def synthesize(text):
     first_diphone = random.choice(DIPHONES[sentence_diphones[0]])
     target = first_diphone[1]
     filename = first_diphone[0]
-    t1 = float(target.c_seconds) * 1000
-    t2 = float(target.n_seconds) * 1000
-
-    target_file = AudioSegment.from_wav('./wav/'+filename.replace('.lab', '.wav').replace('./lab',''))
-    slice_audio = target_file[t1:t2]
+    t1 = float((float(target.c_end) - float(target.c_start)) / 2 + float(target.c_start)) * 1000
+    t2 = float((float(target.n_end) - float(target.n_start)) / 2 + float(target.n_start)) * 1000
+    first_file = AudioSegment.from_wav('./wav'+filename.replace('.TextGrid', '.wav').replace('./data',''))
+    slice_audio = first_file[t1:t2]
+    print t1, t2, filename
+    slice_audio = first_file[t1:t2]
     generated_audio += slice_audio
 
 
@@ -57,22 +58,22 @@ def synthesize(text):
         all_candidates = []
         # Backoff rules
         if sentence_diphones[diphone] not in DIPHONES:
-            if 'sp_' in diphone:
+            if 'sp_' in sentence_diphones[diphone]:
                 diphone = sentence_diphones[diphone].replace('sp_', 'sil_')
         diphone = sentence_diphones[diphone]
         # If diphone exists
         for candidate in DIPHONES[diphone]:
             target = candidate[1]
             filename = candidate[0]
-            t1 = float(target.c_seconds) * 1000
-            t2 = float(target.n_seconds) * 1000
-            target_file = AudioSegment.from_wav('./wav/'+filename.replace('.lab', '.wav').replace('./lab',''))
-            previous_file = AudioSegment.from_wav('./wav/'+previous_diphone[0].replace('.lab', '.wav').replace('./lab',''))
+            t1 = float((float(target.c_end) - float(target.c_start)) / 2 + float(target.c_start)) * 1000
+            t2 = float  ((float(target.n_end) - float(target.n_start)) / 2 + float(target.n_start)) * 1000
+            target_file = AudioSegment.from_wav('./wav'+filename.replace('.TextGrid', '.wav').replace('./data',''))
+            previous_file = AudioSegment.from_wav('./wav'+previous_diphone[0].replace('.TextGrid', '.wav').replace('./data',''))
 
             # Slice both
             target_slice = target_file[t1:t2]
             target_array = target_slice.get_array_of_samples()
-            previous_slice = previous_file[previous_diphone[1]:previous_diphone[2]]
+            previous_slice = previous_file[float(previous_diphone[1]):float(previous_diphone[2])]
             previous_array = previous_slice.get_array_of_samples()
 
             # Score diphones
@@ -82,8 +83,9 @@ def synthesize(text):
 
         all_candidates = sorted(all_candidates, key=lambda x: x[0])
         target = all_candidates[0]
-        target_file = AudioSegment.from_wav('./wav/'+target[1].replace('.lab', '.wav').replace('./lab',''))
+        target_file = AudioSegment.from_wav('./wav'+target[1].replace('.TextGrid', '.wav').replace('./data',''))
 
+        print target[2],target[3], target[1]
         # Get audio slice
         slice_audio = target_file[target[2]:target[3]]
         generated_audio += slice_audio

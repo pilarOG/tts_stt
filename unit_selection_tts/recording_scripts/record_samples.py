@@ -9,9 +9,9 @@ import os
 
 CHUNK = 1024
 FORMAT = pyaudio.paInt16
-CHANNELS = 2 # channels
-RATE = 44100 # sample rate
-RECORD_SECONDS = 10 # seconds to allow recording per sample
+CHANNELS = 1 # channels, must be one for forced alignment toolkit to work
+RATE = 16000 # sample rate
+RECORD_SECONDS = 3 # seconds to allow recording per sample
 
 # recording function
 
@@ -50,8 +50,8 @@ def main(subject_n, sentence_txt):
         os.system('clear')
         for n in range(0, len(sentence_set)):
             if sentence_set[n]:
-                record('data/'+str(n)+sentence_set[n], str(n)+'_'+subject_n+'.wav')
-                outxt = open('data/'+str(n)+'_'+subject_n+'.txt', 'w')
+                record(str(n)+':'+'\t'+sentence_set[n], 'data/'+str(n)+'_'+subject_n+'.wav' )
+                outxt = open('data/'+str(n)+'_'+subject_n+'.lab', 'w')
                 outxt.write(sentence_set[n])
                 outxt.close()
     else:
